@@ -433,6 +433,26 @@ function Dashboard({ setPage, user, onLogout }) {
         return `${timeInMinutes} min`;
     };
 
+    const formatStopTime = (time) => {
+        if (!time || time === "--:--") return "--:--";
+        const [hours, minutes] = time.split(":").map(Number);
+        const date = new Date();
+        date.setHours(hours, minutes, 0, 0);
+        return date.toLocaleTimeString("en-US", {
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: true,
+        });
+    };
+
+    const getStopMinutesUntil = (stop, index) => {
+        if (index <= currentStopIndex) return null;
+        const currentDistance = busStops[currentStopIndex]?.distance || 0;
+        const distanceToStop = stop.distance - currentDistance;
+        const speed = busLocation?.speed || 0;
+        return calculateETA(distanceToStop, speed);
+    };
+
     const handleLogout = () => {
         if (onLogout) {
             onLogout();
@@ -491,6 +511,15 @@ function Dashboard({ setPage, user, onLogout }) {
             busStops[currentStopIndex].distance : 0);
         const speed = busLocation?.speed || 0;
         const eta = calculateETA(distanceLeft, speed);
+        const speedDisplay = speed > 0 ? `${(speed * 3.6).toFixed(1)} km/h` : "0 km/h";
+        const lastUpdated = busLocation?.updated_at
+            ? new Date(busLocation.updated_at).toLocaleTimeString("en-US", {
+                hour: "numeric",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: true,
+            })
+            : "--:--:--";
 
         return (
             <div className="bus-info-card">
@@ -498,34 +527,77 @@ function Dashboard({ setPage, user, onLogout }) {
                     <h3>Bus Information</h3>
                     <div className={`journey-status ${journeyActive ? "active" : "inactive"}`}>
                         <span className="status-dot"></span>
-                        {journeyActive ? "Journey Active" : "Waiting for Driver"}
+                        <span className="journey-status-desktop">
+                            {journeyActive ? "Journey Active" : "Waiting for Driver"}
+                        </span>
+                        <span className="journey-status-mobile">
+                            {journeyActive ? "Moving" : "Waiting"}
+                        </span>
                     </div>
                 </div>
                 <div className="info-grid">
                     <div className="info-item">
-                        <div className="info-label">Current Stop</div>
-                        <div className="info-value">{currentStop.name}</div>
+                        <div className="info-icon info-icon-location" aria-hidden="true">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#4CAF50"/>
+                            </svg>
+                        </div>
+                        <div className="info-item-body">
+                            <div className="info-label">Current Stop</div>
+                            <div className="info-value">{currentStop.name}</div>
+                        </div>
+                    </div>
+                    <div className="info-item info-item-desktop-only">
+                        <div className="info-item-body">
+                            <div className="info-label">Last Stop</div>
+                            <div className="info-value">{lastStopName}</div>
+                        </div>
                     </div>
                     <div className="info-item">
-                        <div className="info-label">Last Stop</div>
-                        <div className="info-value">{lastStopName}</div>
+                        <div className="info-icon info-icon-next" aria-hidden="true">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                                <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8-8-8z" fill="#4CAF50"/>
+                            </svg>
+                        </div>
+                        <div className="info-item-body">
+                            <div className="info-label">Next Stop</div>
+                            <div className="info-value">{nextStopName}</div>
+                        </div>
+                    </div>
+                    <div className="info-item info-item-desktop-only">
+                        <div className="info-item-body">
+                            <div className="info-label">ETA</div>
+                            <div className="info-value">{eta}</div>
+                        </div>
                     </div>
                     <div className="info-item">
-                        <div className="info-label">Next Stop</div>
-                        <div className="info-value">{nextStopName}</div>
+                        <div className="info-icon info-icon-speed" aria-hidden="true">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z" fill="#4CAF50"/>
+                            </svg>
+                        </div>
+                        <div className="info-item-body">
+                            <div className="info-label">Speed</div>
+                            <div className="info-value">{speedDisplay}</div>
+                        </div>
                     </div>
                     <div className="info-item">
-                        <div className="info-label">ETA</div>
-                        <div className="info-value">{eta}</div>
+                        <div className="info-icon info-icon-distance" aria-hidden="true">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                                <path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z" fill="#4CAF50"/>
+                            </svg>
+                        </div>
+                        <div className="info-item-body">
+                            <div className="info-label">Distance Left</div>
+                            <div className="info-value">{distanceLeft.toFixed(1)} km</div>
+                        </div>
                     </div>
-                    <div className="info-item">
-                        <div className="info-label">Speed</div>
-                        <div className="info-value">{speed > 0 ? `${(speed * 3.6).toFixed(1)} km/h` : "0 km/h"}</div>
-                    </div>
-                    <div className="info-item">
-                        <div className="info-label">Distance Left</div>
-                        <div className="info-value">{distanceLeft.toFixed(1)} km</div>
-                    </div>
+                </div>
+                <div className="bus-info-footer">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z" fill="#888"/>
+                    </svg>
+                    <span>Last updated: {lastUpdated}</span>
                 </div>
             </div>
         );
@@ -539,21 +611,62 @@ function Dashboard({ setPage, user, onLogout }) {
                 {busStops.map((stop, index) => (
                     <div 
                         key={stop.id} 
-                        className={`timeline-item ${index === currentStopIndex ? "current" : ""} ${index < currentStopIndex ? "passed" : ""}`}
+                        className={`timeline-item ${index === currentStopIndex ? "current" : ""} ${index < currentStopIndex ? "passed" : ""} ${index > currentStopIndex ? "upcoming" : ""}`}
                     >
                         <div className="timeline-marker">
-                            {index === currentStopIndex && <div className="pulse-ring"></div>}
-                            <div className="marker-dot"></div>
+                            {index === currentStopIndex && !isMobile && <div className="pulse-ring"></div>}
+                            {isMobile ? (
+                                <>
+                                    {index < currentStopIndex && (
+                                        <div className="marker-check">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" fill="white"/>
+                                            </svg>
+                                        </div>
+                                    )}
+                                    {index === currentStopIndex && (
+                                        <div className="marker-bus">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                                <path d="M4 16c0 .88.39 1.67 1 2.22V20c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h8v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1.78c.61-.55 1-1.34 1-2.22V6c0-3.5-3.58-4-8-4s-8 .5-8 4v10zm3.5 1c-.83 0-1.5-.67-1.5-1.5S6.67 14 7.5 14s1.5.67 1.5 1.5S8.33 17 7.5 17zm9 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm1.5-6H6V6h12v5z" fill="white"/>
+                                            </svg>
+                                        </div>
+                                    )}
+                                    {index > currentStopIndex && (
+                                        <div className="marker-dot marker-dot-upcoming"></div>
+                                    )}
+                                </>
+                            ) : (
+                                <div className="marker-dot"></div>
+                            )}
                         </div>
                         <div className="timeline-content">
                             <div className="stop-name">{stop.name}</div>
                             <div className="stop-details">
                                 <span className="stop-distance">{stop.distance} km</span>
-                                <span className="stop-time">{stop.arrival}</span>
+                                <span className="stop-time">{isMobile ? formatStopTime(stop.arrival) : stop.arrival}</span>
                             </div>
                         </div>
+                        {isMobile && (
+                            <div className="timeline-badge">
+                                {index < currentStopIndex && (
+                                    <span className="badge badge-departed">Departed</span>
+                                )}
+                                {index === currentStopIndex && (
+                                    <span className="badge badge-current">Current Stop</span>
+                                )}
+                                {index > currentStopIndex && (
+                                    <span className="badge badge-eta">{getStopMinutesUntil(stop, index)}</span>
+                                )}
+                            </div>
+                        )}
                     </div>
                 ))}
+            </div>
+            <div className="timeline-footer">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z" fill="#4CAF50"/>
+                </svg>
+                <span>All timings are estimated</span>
             </div>
         </div>
     );
@@ -701,7 +814,7 @@ function Dashboard({ setPage, user, onLogout }) {
     }
 
     return (
-        <div className="dashboard">
+        <div className={`dashboard ${isMobile ? "dashboard-mobile" : ""}`}>
             <Sidebar />
             {isMobile && sidebarOpen && (
                 <div 
@@ -710,6 +823,21 @@ function Dashboard({ setPage, user, onLogout }) {
                 ></div>
             )}
             <div className={`dashboard-main ${sidebarOpen ? "" : "expanded"}`}>
+                <header className="mobile-header">
+                    <div className="mobile-header-brand">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M4 16c0 .88.39 1.67 1 2.22V20c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h8v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1.78c.61-.55 1-1.34 1-2.22V6c0-3.5-3.58-4-8-4s-8 .5-8 4v10zm3.5 1c-.83 0-1.5-.67-1.5-1.5S6.67 14 7.5 14s1.5.67 1.5 1.5S8.33 17 7.5 17zm9 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm1.5-6H6V6h12v5z" fill="#4CAF50"/>
+                        </svg>
+                        <h2>VIE Bus Tracker</h2>
+                    </div>
+                    <button className="mobile-notification-btn" type="button" aria-label="Notifications">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z" fill="#4CAF50"/>
+                        </svg>
+                        <span className="notification-dot"></span>
+                    </button>
+                </header>
+
                 <div className="dashboard-header">
                     <button className="sidebar-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -717,6 +845,16 @@ function Dashboard({ setPage, user, onLogout }) {
                         </svg>
                     </button>
                     <h1>Live Bus Tracking</h1>
+                </div>
+
+                <div className="mobile-section-header">
+                    <h2>Live Tracking</h2>
+                    <span className="mobile-live-badge">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M12 3C7.03 3 3 7.03 3 12h2c0-3.87 3.13-7 7-7s7 3.13 7 7h2c0-4.97-4.03-9-9-9zm0 4c-2.76 0-5 2.24-5 5h2c0-1.66 1.34-3 3-3s3 1.34 3 3h2c0-2.76-2.24-5-5-5zm0 4c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1z" fill="#4CAF50"/>
+                        </svg>
+                        Live
+                    </span>
                 </div>
                 
                 <div className="dashboard-content">
@@ -730,6 +868,27 @@ function Dashboard({ setPage, user, onLogout }) {
                         </div>
                     </div>
                 </div>
+
+                <nav className="mobile-bottom-nav" aria-label="Main navigation">
+                    <button className="mobile-nav-item active" type="button">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#4CAF50"/>
+                        </svg>
+                        <span>Live Tracking</span>
+                    </button>
+                    <button className="mobile-nav-item" type="button">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z" fill="#999"/>
+                        </svg>
+                        <span>History</span>
+                    </button>
+                    <button className="mobile-nav-item" type="button">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" fill="#999"/>
+                        </svg>
+                        <span>Profile</span>
+                    </button>
+                </nav>
             </div>
         </div>
     );
