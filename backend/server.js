@@ -136,9 +136,17 @@ app.get("/bus/location/:busId", async (req, res) => {
             .from("bus_locations")
             .select("*")
             .eq("bus_id", busId)
-            .single();
+            .order("updated_at", { ascending: false }) // newest first
+            .limit(1);
 
         if (error) {
+            return res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+
+        if (!data || data.length === 0) {
             return res.status(404).json({
                 success: false,
                 message: "Bus location not found"
@@ -147,7 +155,7 @@ app.get("/bus/location/:busId", async (req, res) => {
 
         res.json({
             success: true,
-            location: data
+            location: data[0]
         });
 
     } catch (err) {
