@@ -12,11 +12,18 @@ function App() {
     email: "",
     password: ""
   });
+  const [simulationMode, setSimulationMode] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
   // Check URL parameters and localStorage on app load
   useEffect(() => {
+    // Load simulationMode from localStorage if available
+    const savedSimulationMode = localStorage.getItem('simulationMode');
+    if (savedSimulationMode !== null) {
+      setSimulationMode(savedSimulationMode === 'true');
+    }
+    
     const driverParam = searchParams.get('driver');
     
     // If driver parameter is present (any truthy value), go directly to driver page
@@ -45,7 +52,9 @@ function App() {
     if (page === 'dashboard') {
       localStorage.setItem('page', page);
     }
-  }, [user, page]);
+    // Save simulationMode to localStorage
+    localStorage.setItem('simulationMode', simulationMode.toString());
+  }, [user, page, simulationMode]);
 
   // Clear localStorage on logout
   const handleLogout = () => {
@@ -71,12 +80,18 @@ function App() {
             :
             page === "driver"
               ?
-              <Driver setPage={setPage} user={user} />
+              <Driver 
+                setPage={setPage} 
+                user={user} 
+                simulationMode={simulationMode}
+                setSimulationMode={setSimulationMode}
+              />
               :
               <Dashboard
                 setPage={setPage}
                 user={user}
                 onLogout={handleLogout}
+                simulationMode={simulationMode}
               />
       }
     </div>

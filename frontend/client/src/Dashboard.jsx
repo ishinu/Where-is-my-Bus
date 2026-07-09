@@ -22,12 +22,17 @@ const BUS_STOPS = [];
 const routes = {
 
     morning: [
-
+        {
+            name: "Test Bust Stop",
+            lat: 22.251793,
+            lng: 73.203155,
+            distanceFromStart: 0
+        },
         {
             name: "Ganga Sagar",
             lat: 22.256082,
             lng: 73.211874,
-            distanceFromStart: 0
+            distanceFromStart: 0.5
         },
 
         {
@@ -102,8 +107,8 @@ const routes = {
 
         {
             name: "VIER College",
-            lat: 22.404918,
-            lng: 73.287756,
+            lat: 22.413941,
+            lng: 73.302498,
             distanceFromStart: 28.1
         }
 
@@ -113,8 +118,8 @@ const routes = {
 
         {
             name: "VIER College",
-            lat: 22.404918,
-            lng: 73.287756,
+            lat: 22.413941,
+            lng: 73.302498,
             distanceFromStart: 0
         },
 
@@ -194,6 +199,12 @@ const routes = {
             lat: 22.256082,
             lng: 73.211874,
             distanceFromStart: 26.5
+        },
+        {
+            name: "Test Bust Stop",
+            lat: 22.251793,
+            lng: 73.203155,
+            distanceFromStart: 27.6
         }
 
     ]
@@ -202,7 +213,9 @@ const routes = {
 
 const BUS_ID = 1;
 
-function Dashboard({ setPage, user, onLogout }) {
+function Dashboard({ setPage, user, onLogout, simulationMode }) {
+    console.log('Dashboard received simulationMode:', simulationMode);
+    
     const [busLocation, setBusLocation] = useState(null);
     const [journeyActive, setJourneyActive] = useState(false);
     const [currentStopIndex, setCurrentStopIndex] = useState(0);
@@ -217,6 +230,7 @@ function Dashboard({ setPage, user, onLogout }) {
     const markerRef = useRef(null);
     const animationFrameRef = useRef(null);
     const [journeyStartTime, setJourneyStartTime] = useState(null);
+    const [simulationActive, setSimulationActive] = useState(false);
 
     // Smooth animation for marker position
     useEffect(() => {
@@ -258,6 +272,11 @@ function Dashboard({ setPage, user, onLogout }) {
     // Initialize route based on tripType
     useEffect(() => {
         const selectedRoute = routes[tripType] || routes.morning;
+        
+        console.log('Route changed - tripType:', tripType, 'Route:', tripType === 'morning' ? 'Morning Route' : 'Evening Route');
+        
+        // Reset current stop index when route changes
+        setCurrentStopIndex(0);
         
         // Convert route stops to bus stops format without times initially
         const stops = selectedRoute.map((stop, index) => ({
@@ -331,7 +350,7 @@ function Dashboard({ setPage, user, onLogout }) {
             
             setBusStops(updatedStops);
         }
-    }, [journeyStartTime, busLocation?.speed, busStops]);
+    }, [journeyStartTime, busLocation?.speed]);
 
     // Detect mobile screen size
     useEffect(() => {
@@ -350,18 +369,36 @@ function Dashboard({ setPage, user, onLogout }) {
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
-    // Fetch bus location and check journey status
+    // Fetch bus location and check journey status (only when NOT in simulation mode)
     useEffect(() => {
+        console.log('Polling useEffect - simulationMode:', simulationMode);
+        
+        if (simulationMode) {
+            // In simulation mode, don't fetch from backend
+            console.log('Simulation mode detected - skipping backend fetch');
+            setLoading(false);
+            return;
+        }
+
         const fetchBusLocation = async () => {
             try {
                 const response = await fetch(`${BACKEND_URL}/bus/location/${BUS_ID}`);
                 const data = await response.json();
 
                 if (data.success && data.location) {
+                    console.log('Latest location received:', {
+                        latitude: data.location.latitude,
+                        longitude: data.location.longitude,
+                        speed: data.location.speed,
+                        tripType: data.location.tripType,
+                        updated_at: data.location.updated_at
+                    });
+                    
                     setBusLocation(data.location);
                     
                     // Update tripType from backend if available
                     if (data.location.tripType && data.location.tripType !== tripType) {
+                        console.log('TripType changed from', tripType, 'to', data.location.tripType);
                         setTripType(data.location.tripType);
                     }
                     
@@ -389,7 +426,74 @@ function Dashboard({ setPage, user, onLogout }) {
         const interval = setInterval(fetchBusLocation, 10000);
 
         return () => clearInterval(interval);
-    }, [tripType]);
+    }, [simulationMode]);
+
+    // Simulation mode: Virtual bus movement through route stops
+    useEffect(() => {
+        if (!simulationMode) {
+            setSimulationActive(false);
+            return;
+        }
+
+        console.log('Simulation mode activated - Starting virtual bus movement');
+        setSimulationActive(true);
+        setJourneyActive(true);
+        setLoading(false);
+        
+        // Read tripType from localStorage (set by Driver)
+        const savedTripType = localStorage.getItem('currentTripType') || 'morning';
+        console.log('Simulation: Using tripType from localStorage:', savedTripType);
+        setTripType(savedTripType);
+        
+        // Start simulation from first stop
+        let simStopIndex = 0;
+        const selectedRoute = routes[savedTripType] || routes.morning;
+        
+        const moveVirtualBus = () => {
+            if (simStopIndex < selectedRoute.length) {
+                const currentStop = selectedRoute[simStopIndex];
+                
+                console.log('Simulation: Virtual bus at stop', simStopIndex, currentStop.name);
+                
+                // Update bus location with current stop coordinates
+                setBusLocation({
+                    latitude: currentStop.lat,
+                    longitude: currentStop.lng,
+                    speed: 10, // Simulated speed in m/s (~36 km/h)
+                    tripType: savedTripType,
+                    updated_at: new Date().toISOString()
+                });
+                
+                // Update current stop index
+                setCurrentStopIndex(simStopIndex);
+                
+                simStopIndex++;
+            } else {
+                // Reached end of route, restart from beginning
+                console.log('Simulation: End of route reached, restarting');
+                simStopIndex = 0;
+            }
+        };
+
+        // Wait for route to initialize before starting movement
+        const startDelay = setTimeout(() => {
+            console.log('Simulation: Starting movement after route initialization delay');
+            moveVirtualBus();
+            
+            // Move to next stop every 10 seconds
+            const interval = setInterval(moveVirtualBus, 10000);
+
+            return () => {
+                clearInterval(interval);
+                setSimulationActive(false);
+            };
+        }, 1000); // 1 second delay to ensure route initialization completes
+
+        return () => {
+            clearTimeout(startDelay);
+            setSimulationActive(false);
+        };
+    }, [simulationMode]);
 
     const calculateDistance = (lat1, lon1, lat2, lon2) => {
         const R = 6371; // Earth's radius in km
@@ -406,6 +510,18 @@ function Dashboard({ setPage, user, onLogout }) {
     // Calculate current stop based on geofencing
     useEffect(() => {
         if (busLocation && journeyActive && busStops.length > 0) {
+            const currentStop = busStops[currentStopIndex];
+            const nextStop = busStops[currentStopIndex + 1];
+            
+            console.log('Current stop info:', {
+                currentStop: currentStop?.name,
+                currentIndex: currentStopIndex,
+                nextStop: nextStop?.name,
+                nextIndex: currentStopIndex + 1,
+                tripType: tripType,
+                routeName: tripType === 'morning' ? 'Morning Route' : 'Evening Route'
+            });
+            
             const nextStopIndex = currentStopIndex + 1;
             
             // Only check if there's a next stop
@@ -420,11 +536,12 @@ function Dashboard({ setPage, user, onLogout }) {
                 
                 // If bus is within 100 meters of next stop, advance the timeline
                 if (distanceToNextStop <= 100) {
+                    console.log('Advancing to next stop:', nextStop.name, 'Distance:', distanceToNextStop.toFixed(2), 'meters');
                     setCurrentStopIndex(nextStopIndex);
                 }
             }
         }
-    }, [busLocation, journeyActive, busStops, currentStopIndex]);
+    }, [busLocation, journeyActive, currentStopIndex, tripType]);
 
     const calculateETA = (distance, speed) => {
         if (!speed || speed === 0) return "--";
@@ -528,10 +645,10 @@ function Dashboard({ setPage, user, onLogout }) {
                     <div className={`journey-status ${journeyActive ? "active" : "inactive"}`}>
                         <span className="status-dot"></span>
                         <span className="journey-status-desktop">
-                            {journeyActive ? "Journey Active" : "Waiting for Driver"}
+                            {simulationMode ? "Testing Mode" : (journeyActive ? "Journey Active" : "Waiting for Driver")}
                         </span>
                         <span className="journey-status-mobile">
-                            {journeyActive ? "Moving" : "Waiting"}
+                            {simulationMode ? "Testing" : (journeyActive ? "Moving" : "Waiting")}
                         </span>
                     </div>
                 </div>
@@ -679,8 +796,19 @@ function Dashboard({ setPage, user, onLogout }) {
         const nextStopName = nextStop ? nextStop.name : "Destination";
 
         // Use OSRM route coordinates if available, otherwise fallback to stop coordinates
-        const routePoints = routeCoordinates.length > 0 ? routeCoordinates : busStops.map(stop => [stop.lat, stop.lng]);
-
+        // const routePoints = routeCoordinates.length > 0 ? routeCoordinates : busStops.map(stop => [stop.lat, stop.lng]);
+        const routePoints =
+  routeCoordinates.length > 0
+    ? routeCoordinates.filter(
+        p =>
+          Array.isArray(p) &&
+          p.length === 2 &&
+          p[0] != null &&
+          p[1] != null
+      )
+    : busStops
+        .filter(stop => stop.lat != null && stop.lng != null)
+        .map(stop => [stop.lat, stop.lng]);
         // Custom bus icon
         const busIcon = L.divIcon({
             className: "custom-bus-marker",
@@ -700,7 +828,7 @@ function Dashboard({ setPage, user, onLogout }) {
                     center={center} 
                     zoom={13} 
                     style={{ height: "100%", width: "100%" }}
-                    bounds={routePoints.length > 0 ? routePoints : busStops.map(stop => [stop.lat, stop.lng])}
+                    bounds={routePoints.length > 0 ? routePoints : (busStops.length > 0 ? busStops.map(stop => [stop.lat, stop.lng]) : [])}
                     boundsOptions={{ padding: [50, 50] }}
                 >
                     <TileLayer
@@ -709,15 +837,22 @@ function Dashboard({ setPage, user, onLogout }) {
                     />
                     
                     {/* Bus route polyline - dark and bold using OSRM data */}
-                    <Polyline 
+                    {/* <Polyline 
                         positions={routePoints}
                         color="#2E7D32"
                         weight={6}
                         opacity={1}
+                    /> */}
+                    {routePoints.length > 0 && (
+                    <Polyline
+                        positions={routePoints}
+                        color="#2E7D32"
+                        weight={6}
                     />
+                    )}
                     
                     {/* Bus stops markers */}
-                    {busStops.map((stop, index) => (
+                    {busStops.length > 0 && busStops.map((stop, index) => (
                         <CircleMarker
                             key={stop.id}
                             center={[stop.lat, stop.lng]}
@@ -778,7 +913,7 @@ function Dashboard({ setPage, user, onLogout }) {
                                     <div className="floating-info-header">
                                         <span className="bus-number">Bus #{BUS_ID}</span>
                                         <span className={`live-status ${journeyActive ? 'live' : ''}`}>
-                                            {journeyActive ? '● LIVE' : '○ OFFLINE'}
+                                            {simulationMode ? '● TESTING' : (journeyActive ? '● LIVE' : '○ OFFLINE')}
                                         </span>
                                     </div>
                                     <div className="floating-info-details">
