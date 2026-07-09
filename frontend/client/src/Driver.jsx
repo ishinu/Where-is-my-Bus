@@ -71,6 +71,7 @@ function Driver({ setPage, user, simulationMode, setSimulationMode }) {
 
     intervalId.current = setInterval(async () => {
       try {
+        console.log("Sending", latestLocation.current);
         // Only send to backend if NOT in simulation mode
         if (!simulationMode) {
           await axios.post(`${BACKEND_URL}/bus/location`, {

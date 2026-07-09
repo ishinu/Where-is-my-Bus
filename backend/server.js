@@ -171,6 +171,9 @@ app.get("/bus/location/:busId", async (req, res) => {
 
 app.post("/bus/location", async (req, res) => {
 
+    console.log("BODY RECEIVED");
+    console.log(req.body);
+    
     const {
         busId,
         tripType,
