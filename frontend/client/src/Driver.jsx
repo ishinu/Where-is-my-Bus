@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 
 // Backend URL
@@ -25,6 +25,27 @@ function Driver({ setPage, user, simulationMode, setSimulationMode }) {
     speed: 0,
   });
 
+  const handleStartJourney = async () => {
+
+    try {
+
+        await axios.post(`${BACKEND_URL}/bus/start`, {
+            busId: 1,
+            tripType
+        });
+
+        localStorage.removeItem("simulationStopIndex");
+
+        startJourney();
+
+    } catch (err) {
+
+        console.log(err);
+
+    }
+
+};
+
   const startJourney = () => {
     console.log("startJourney called - simulationMode:", simulationMode, "tripType:", tripType);
     
@@ -34,6 +55,16 @@ function Driver({ setPage, user, simulationMode, setSimulationMode }) {
     if (!simulationMode && !navigator.geolocation) {
       alert("Geolocation is not supported");
       return;
+    }
+
+    // Clear previous watcher if any
+    if (watchId.current !== null) {
+        navigator.geolocation.clearWatch(watchId.current);
+    }
+
+    // Clear previous interval if any
+    if (intervalId.current !== null) {
+        clearInterval(intervalId.current);
     }
 
     setStatus("Online");
@@ -91,6 +122,24 @@ function Driver({ setPage, user, simulationMode, setSimulationMode }) {
     }, 10000);
   };
 
+  const handleStopJourney = async () => {
+
+    try {
+
+        await axios.post(`${BACKEND_URL}/bus/stop`, {
+            busId: 1
+        });
+
+        stopJourney();
+
+    } catch (err) {
+
+        console.log(err);
+
+    }
+
+};
+
   const stopJourney = () => {
     setStatus("Offline");
 
@@ -102,6 +151,36 @@ function Driver({ setPage, user, simulationMode, setSimulationMode }) {
       clearInterval(intervalId.current);
     }
   };
+
+  const checkJourney = async () => {
+
+    try {
+
+        const response = await axios.get(
+            `${BACKEND_URL}/bus/status/1`
+        );
+
+        if (response.data.status.journey_active) {
+
+            setTripType(response.data.status.trip_type);
+
+            startJourney();
+
+        }
+
+    } catch (err) {
+
+        console.log(err);
+
+    }
+
+};
+
+useEffect(() => {
+
+    checkJourney();
+
+}, []);
 
   return (
     <div>
@@ -171,11 +250,11 @@ function Driver({ setPage, user, simulationMode, setSimulationMode }) {
         </p>
       )}
 
-      <button onClick={startJourney} disabled={status === "Online"}>
+      <button onClick={handleStartJourney} disabled={status === "Online"}>
         Start Journey
       </button>
 
-      <button onClick={stopJourney} disabled={status === "Offline"}>
+      <button onClick={handleStopJourney} disabled={status === "Offline"}>
         Stop Journey
       </button>
 

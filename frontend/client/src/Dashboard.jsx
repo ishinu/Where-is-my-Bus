@@ -22,23 +22,23 @@ const BUS_STOPS = [];
 const routes = {
 
     morning: [
-        // {
-        //     name: "Test Bust Stop 1",
-        //     lat: 22.251793,
-        //     lng: 73.203155,
-        //     distanceFromStart: 0
-        // },
-        // {
-        //     name: "Test Bust Stop 2",
-        //     lat: 22.251733,
-        //     lng: 73.210748,
-        //     distanceFromStart: 0.3
-        // },
+        {
+            name: "Test Bust Stop 1",
+            lat: 22.251793,
+            lng: 73.203155,
+            distanceFromStart: 0
+        },
+        {
+            name: "Test Bust Stop 2",
+            lat: 22.251733,
+            lng: 73.210748,
+            distanceFromStart: 0.3
+        },
         {
             name: "Ganga Sagar",
             lat: 22.256082,
             lng: 73.211874,
-            distanceFromStart: 0
+            distanceFromStart: 0.5
         },
 
         {
@@ -74,6 +74,13 @@ const routes = {
             lat: 22.300147,
             lng: 73.238099,
             distanceFromStart: 6.5
+        },
+
+        {
+            name: "Rikita Mam Stop",
+            lat: 22.316162,
+            lng: 73.245047,
+            distanceFromStart: 6.9
         },
 
         {
@@ -205,19 +212,19 @@ const routes = {
             lat: 22.256082,
             lng: 73.211874,
             distanceFromStart: 26.5
+        },
+        {
+            name: "Test Bust Stop 2",
+            lat: 22.251733,
+            lng: 73.210748,
+            distanceFromStart: 26.9
+        },
+        {
+            name: "Test Bust Stop 1",
+            lat: 22.251793,
+            lng: 73.203155,
+            distanceFromStart: 27.6
         }
-        // {
-        //     name: "Test Bust Stop 2",
-        //     lat: 22.251733,
-        //     lng: 73.210748,
-        //     distanceFromStart: 26.9
-        // },
-        // {
-        //     name: "Test Bust Stop 1",
-        //     lat: 22.251793,
-        //     lng: 73.203155,
-        //     distanceFromStart: 27.6
-        // }
 
     ]
 
@@ -288,7 +295,7 @@ function Dashboard({ setPage, user, onLogout, simulationMode }) {
         console.log('Route changed - tripType:', tripType, 'Route:', tripType === 'morning' ? 'Morning Route' : 'Evening Route');
         
         // Reset current stop index when route changes
-        setCurrentStopIndex(0);
+        // setCurrentStopIndex(0);
         
         // Convert route stops to bus stops format without times initially
         const stops = selectedRoute.map((stop, index) => ({
@@ -440,72 +447,155 @@ function Dashboard({ setPage, user, onLogout, simulationMode }) {
         return () => clearInterval(interval);
     }, [simulationMode]);
 
-    // Simulation mode: Virtual bus movement through route stops
     useEffect(() => {
-        if (!simulationMode) {
-            setSimulationActive(false);
-            return;
+
+    if (!simulationMode) {
+        setSimulationActive(false);
+        return;
+    }
+
+    console.log("Simulation mode activated - Starting virtual bus movement");
+
+    setSimulationActive(true);
+    setJourneyActive(true);
+    setLoading(false);
+
+    // Read trip type
+    const savedTripType = localStorage.getItem("currentTripType") || "morning";
+    setTripType(savedTripType);
+
+    const selectedRoute = routes[savedTripType] || routes.morning;
+
+    // Resume from previous stop if available
+    let simStopIndex = parseInt(
+        localStorage.getItem("simulationStopIndex") || "0"
+    );
+
+    const moveVirtualBus = () => {
+
+        if (simStopIndex >= selectedRoute.length) {
+
+            console.log("Simulation: Route completed. Restarting from Stop 1");
+
+            simStopIndex = 0;
+
+            localStorage.setItem(
+                "simulationStopIndex",
+                "0"
+            );
+
         }
 
-        console.log('Simulation mode activated - Starting virtual bus movement');
-        setSimulationActive(true);
-        setJourneyActive(true);
-        setLoading(false);
+        const currentStop = selectedRoute[simStopIndex];
+
+        console.log(
+            "Simulation Bus:",
+            currentStop.name,
+            "Stop Index:",
+            simStopIndex
+        );
+
+        // Update bus location
+        setBusLocation({
+            latitude: currentStop.lat,
+            longitude: currentStop.lng,
+            speed: 10,
+            tripType: savedTripType,
+            updated_at: new Date().toISOString()
+        });
+
+        // Update current stop
+        setCurrentStopIndex(simStopIndex);
+
+        // Save progress
+        localStorage.setItem(
+            "simulationStopIndex",
+            simStopIndex.toString()
+        );
+
+        // Next stop
+        simStopIndex++;
+
+    };
+
+    // Show current stop immediately
+    moveVirtualBus();
+
+    // Move every 10 seconds
+    const interval = setInterval(moveVirtualBus, 10000);
+
+    return () => {
+        clearInterval(interval);
+    };
+
+}, [simulationMode]);
+
+    // Simulation mode: Virtual bus movement through route stops
+    // useEffect(() => {
+    //     if (!simulationMode) {
+    //         setSimulationActive(false);
+    //         return;
+    //     }
+
+    //     console.log('Simulation mode activated - Starting virtual bus movement');
+    //     setSimulationActive(true);
+    //     setJourneyActive(true);
+    //     setLoading(false);
         
-        // Read tripType from localStorage (set by Driver)
-        const savedTripType = localStorage.getItem('currentTripType') || 'morning';
-        console.log('Simulation: Using tripType from localStorage:', savedTripType);
-        setTripType(savedTripType);
+    //     // Read tripType from localStorage (set by Driver)
+    //     const savedTripType = localStorage.getItem('currentTripType') || 'morning';
+    //     console.log('Simulation: Using tripType from localStorage:', savedTripType);
+    //     setTripType(savedTripType);
         
-        // Start simulation from first stop
-        let simStopIndex = 0;
-        const selectedRoute = routes[savedTripType] || routes.morning;
+    //     // Start simulation from first stop
+    //     let simStopIndex = 0;
+    //     const selectedRoute = routes[savedTripType] || routes.morning;
         
-        const moveVirtualBus = () => {
-            if (simStopIndex < selectedRoute.length) {
-                const currentStop = selectedRoute[simStopIndex];
+    //     const moveVirtualBus = () => {
+    //         if (simStopIndex < selectedRoute.length) {
+    //             const currentStop = selectedRoute[simStopIndex];
                 
-                console.log('Simulation: Virtual bus at stop', simStopIndex, currentStop.name);
+    //             console.log('Simulation: Virtual bus at stop', simStopIndex, currentStop.name);
                 
-                // Update bus location with current stop coordinates
-                setBusLocation({
-                    latitude: currentStop.lat,
-                    longitude: currentStop.lng,
-                    speed: 10, // Simulated speed in m/s (~36 km/h)
-                    tripType: savedTripType,
-                    updated_at: new Date().toISOString()
-                });
+    //             // Update bus location with current stop coordinates
+    //             setBusLocation({
+    //                 latitude: currentStop.lat,
+    //                 longitude: currentStop.lng,
+    //                 speed: 10, // Simulated speed in m/s (~36 km/h)
+    //                 tripType: savedTripType,
+    //                 updated_at: new Date().toISOString()
+    //             });
                 
-                // Update current stop index
-                setCurrentStopIndex(simStopIndex);
+    //             // Update current stop index
+    //             setCurrentStopIndex(simStopIndex);
                 
-                simStopIndex++;
-            } else {
-                // Reached end of route, restart from beginning
-                console.log('Simulation: End of route reached, restarting');
-                simStopIndex = 0;
-            }
-        };
+    //             simStopIndex++;
+    //         } else {
+    //             // Reached end of route, restart from beginning
+    //             console.log('Simulation: End of route reached, restarting');
+    //             simStopIndex = 0;
+    //         }
+    //     };
 
         // Wait for route to initialize before starting movement
-        const startDelay = setTimeout(() => {
-            console.log('Simulation: Starting movement after route initialization delay');
-            moveVirtualBus();
+    //     const startDelay = setTimeout(() => {
+    //         console.log('Simulation: Starting movement after route initialization delay');
+    //         moveVirtualBus();
             
-            // Move to next stop every 10 seconds
-            const interval = setInterval(moveVirtualBus, 10000);
+    //         // Move to next stop every 10 seconds
+    //         const interval = setInterval(moveVirtualBus, 10000);
 
-            return () => {
-                clearInterval(interval);
-                setSimulationActive(false);
-            };
-        }, 1000); // 1 second delay to ensure route initialization completes
+    //         return () => {
+    //             clearInterval(interval);
+    //             setSimulationActive(false);
+    //         };
+    //     }, 1000); // 1 second delay to ensure route initialization completes
 
-        return () => {
-            clearTimeout(startDelay);
-            setSimulationActive(false);
-        };
-    }, [simulationMode]);
+    //     return () => {
+    //         clearTimeout(startDelay);
+    //         setSimulationActive(false);
+    //     };
+    // }, [simulationMode]);
 
     const calculateDistance = (lat1, lon1, lat2, lon2) => {
         const R = 6371; // Earth's radius in km
@@ -519,41 +609,127 @@ function Dashboard({ setPage, user, onLogout, simulationMode }) {
         return R * c * 1000; // Return distance in meters
     };
 
-    // Calculate current stop based on geofencing
-    useEffect(() => {
-        if (busLocation && journeyActive && busStops.length > 0) {
-            const currentStop = busStops[currentStopIndex];
-            const nextStop = busStops[currentStopIndex + 1];
-            
-            console.log('Current stop info:', {
-                currentStop: currentStop?.name,
-                currentIndex: currentStopIndex,
-                nextStop: nextStop?.name,
-                nextIndex: currentStopIndex + 1,
-                tripType: tripType,
-                routeName: tripType === 'morning' ? 'Morning Route' : 'Evening Route'
-            });
-            
-            const nextStopIndex = currentStopIndex + 1;
-            
-            // Only check if there's a next stop
-            if (nextStopIndex < busStops.length) {
-                const nextStop = busStops[nextStopIndex];
-                const distanceToNextStop = calculateDistance(
-                    busLocation.latitude,
-                    busLocation.longitude,
-                    nextStop.lat,
-                    nextStop.lng
-                );
-                
-                // If bus is within 100 meters of next stop, advance the timeline
-                if (distanceToNextStop <= 100) {
-                    console.log('Advancing to next stop:', nextStop.name, 'Distance:', distanceToNextStop.toFixed(2), 'meters');
-                    setCurrentStopIndex(nextStopIndex);
-                }
-            }
+//     const findCurrentStop = (latitude, longitude, stops) => {
+
+//     let nearestIndex = 0;
+//     let nearestDistance = Number.MAX_VALUE;
+
+//     stops.forEach((stop, index) => {
+
+//         const distance = calculateDistance(
+//             latitude,
+//             longitude,
+//             stop.lat,
+//             stop.lng
+//         );
+
+//         if (distance < nearestDistance) {
+
+//             nearestDistance = distance;
+//             nearestIndex = index;
+
+//         }
+
+//     });
+
+//     return {
+//         index: nearestIndex,
+//         distance: nearestDistance
+//     };
+
+// };
+
+const findNearestStop = (latitude, longitude) => {
+
+    let nearestIndex = 0;
+    let nearestDistance = Number.MAX_VALUE;
+
+    busStops.forEach((stop, index) => {
+
+        const distance = calculateDistance(
+            latitude,
+            longitude,
+            stop.lat,
+            stop.lng
+        );
+
+        if (distance < nearestDistance) {
+            nearestDistance = distance;
+            nearestIndex = index;
         }
-    }, [busLocation, journeyActive, currentStopIndex, tripType]);
+
+    });
+
+    return {
+        nearestIndex,
+        nearestDistance
+    };
+
+};
+
+useEffect(() => {
+
+    if (!busLocation || !journeyActive || busStops.length === 0)
+        return;
+
+    const { nearestIndex, nearestDistance } = findNearestStop(
+        busLocation.latitude,
+        busLocation.longitude
+    );
+
+    console.log({
+    currentStop: busStops[nearestIndex].name,
+    currentIndex: nearestIndex,
+    nextStop: busStops[nearestIndex + 1]?.name,
+    nextIndex: nearestIndex + 1,
+    tripType,
+    routeName: tripType === "morning"
+        ? "Morning Route"
+        : "Evening Route"
+});
+
+    console.log("Nearest Stop:", busStops[nearestIndex].name);
+    console.log("Distance:", nearestDistance);
+
+    setCurrentStopIndex(nearestIndex);
+
+},  [busLocation, journeyActive, busStops, currentStopIndex]);
+
+    // Calculate current stop based on geofencing
+    // useEffect(() => {
+    //     if (busLocation && journeyActive && busStops.length > 0) {
+    //         const currentStop = busStops[currentStopIndex];
+    //         const nextStop = busStops[currentStopIndex + 1];
+            
+    //         console.log('Current stop info:', {
+    //             currentStop: currentStop?.name,
+    //             currentIndex: currentStopIndex,
+    //             nextStop: nextStop?.name,
+    //             nextIndex: currentStopIndex + 1,
+    //             tripType: tripType,
+    //             routeName: tripType === 'morning' ? 'Morning Route' : 'Evening Route'
+    //         });
+            
+    //         const nextStopIndex = currentStopIndex + 1;
+            
+    //         // Only check if there's a next stop
+    //         if (nextStopIndex < busStops.length) {
+    //             const nextStop = busStops[nextStopIndex];
+    //             const distanceToNextStop = calculateDistance(
+    //                 busLocation.latitude,
+    //                 busLocation.longitude,
+    //                 nextStop.lat,
+    //                 nextStop.lng
+    //             );
+                
+    //             // If bus is within 100 meters of next stop, advance the timeline
+    //             if (distanceToNextStop <= 100) {
+    //                 console.log('Advancing to next stop:', nextStop.name, 'Distance:', distanceToNextStop.toFixed(2), 'meters');
+    //                 setCurrentStopIndex(nextStopIndex);
+    //             }
+    //         }
+    //     }
+    // }, [busLocation, journeyActive, currentStopIndex, tripType]);
 
     const calculateETA = (distance, speed) => {
         if (!speed || speed === 0) return "--";

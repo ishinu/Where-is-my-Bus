@@ -254,6 +254,69 @@ app.get("/bus/stops/:busId", async (req, res) => {
 
 });
 
+app.post("/bus/start", async (req, res) => {
+
+    const { busId, tripType } = req.body;
+
+    const { error } = await supabase
+        .from("bus_status")
+        .update({
+            journey_active: true,
+            trip_type: tripType,
+            updated_at: new Date()
+        })
+        .eq("bus_id", busId);
+
+    if (error)
+        return res.status(500).json(error);
+
+    res.json({
+        success: true
+    });
+
+});
+
+app.post("/bus/stop", async (req, res) => {
+
+    const { busId } = req.body;
+
+    const { error } = await supabase
+        .from("bus_status")
+        .update({
+            journey_active: false,
+            updated_at: new Date()
+        })
+        .eq("bus_id", busId);
+
+    if (error)
+        return res.status(500).json(error);
+
+    res.json({
+        success: true
+    });
+
+});
+
+app.get("/bus/status/:busId", async (req, res) => {
+
+    const { busId } = req.params;
+
+    const { data, error } = await supabase
+        .from("bus_status")
+        .select("*")
+        .eq("bus_id", busId)
+        .single();
+
+    if (error)
+        return res.status(500).json(error);
+
+    res.json({
+        success: true,
+        status: data
+    });
+
+});
+
 app.get("/", (req, res) => {
   res.send("Hello World!");
 });
