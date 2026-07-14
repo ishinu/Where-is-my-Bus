@@ -22,18 +22,18 @@ const BUS_STOPS = [];
 const routes = {
 
     morning: [
-        {
-            name: "Test Bust Stop 1",
-            lat: 22.251793,
-            lng: 73.203155,
-            distanceFromStart: 0
-        },
-        {
-            name: "Test Bust Stop 2",
-            lat: 22.251733,
-            lng: 73.210748,
-            distanceFromStart: 0.3
-        },
+        // {
+        //     name: "Test Bust Stop 1",
+        //     lat: 22.251793,
+        //     lng: 73.203155,
+        //     distanceFromStart: 0
+        // },
+        // {
+        //     name: "Test Bust Stop 2",
+        //     lat: 22.251733,
+        //     lng: 73.210748,
+        //     distanceFromStart: 0.3
+        // },
         {
             name: "Ganga Sagar",
             lat: 22.256082,
@@ -76,10 +76,17 @@ const routes = {
             distanceFromStart: 6.5
         },
 
+        // {
+        //     name: "Rikita Mam Stop",
+        //     lat: 22.316162,
+        //     lng: 73.245047,
+        //     distanceFromStart: 7.1
+        // },
+
         {
             name: "Rikita Mam Stop",
-            lat: 22.316162,
-            lng: 73.245047,
+            lat: 22.313767,
+            lng: 73.241003,
             distanceFromStart: 7.1
         },
 
@@ -212,19 +219,19 @@ const routes = {
             lat: 22.256082,
             lng: 73.211874,
             distanceFromStart: 26.5
-        },
-        {
-            name: "Test Bust Stop 2",
-            lat: 22.251733,
-            lng: 73.210748,
-            distanceFromStart: 26.9
-        },
-        {
-            name: "Test Bust Stop 1",
-            lat: 22.251793,
-            lng: 73.203155,
-            distanceFromStart: 27.6
         }
+        // {
+        //     name: "Test Bust Stop 2",
+        //     lat: 22.251733,
+        //     lng: 73.210748,
+        //     distanceFromStart: 26.9
+        // },
+        // {
+        //     name: "Test Bust Stop 1",
+        //     lat: 22.251793,
+        //     lng: 73.203155,
+        //     distanceFromStart: 27.6
+        // }
 
     ]
 
