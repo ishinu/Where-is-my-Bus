@@ -22,23 +22,23 @@ const BUS_STOPS = [];
 const routes = {
 
     morning: [
-        // {
-        //     name: "Test Bust Stop 1",
-        //     lat: 22.251793,
-        //     lng: 73.203155,
-        //     distanceFromStart: 0
-        // },
-        // {
-        //     name: "Test Bust Stop 2",
-        //     lat: 22.251733,
-        //     lng: 73.210748,
-        //     distanceFromStart: 0.3
-        // },
+        {
+            name: "Test Bust Stop 1",
+            lat: 22.251793,
+            lng: 73.203155,
+            distanceFromStart: 0
+        },
+        {
+            name: "Test Bust Stop 2",
+            lat: 22.251733,
+            lng: 73.210748,
+            distanceFromStart: 0.3
+        },
         {
             name: "Ganga Sagar",
             lat: 22.256082,
             lng: 73.211874,
-            distanceFromStart: 0
+            distanceFromStart: 0.6
         },
 
         {
@@ -212,19 +212,19 @@ const routes = {
             lat: 22.256082,
             lng: 73.211874,
             distanceFromStart: 26.5
+        },
+        {
+            name: "Test Bust Stop 2",
+            lat: 22.251733,
+            lng: 73.210748,
+            distanceFromStart: 26.9
+        },
+        {
+            name: "Test Bust Stop 1",
+            lat: 22.251793,
+            lng: 73.203155,
+            distanceFromStart: 27.6
         }
-        // {
-        //     name: "Test Bust Stop 2",
-        //     lat: 22.251733,
-        //     lng: 73.210748,
-        //     distanceFromStart: 26.9
-        // },
-        // {
-        //     name: "Test Bust Stop 1",
-        //     lat: 22.251793,
-        //     lng: 73.203155,
-        //     distanceFromStart: 27.6
-        // }
 
     ]
 
@@ -320,22 +320,66 @@ function Dashboard({ setPage, user, onLogout, simulationMode }) {
     }, [tripType]);
 
     // Track journey start time and calculate dynamic arrival times
+    // useEffect(() => {
+    //     if (journeyActive && !journeyStartTime && busLocation) {
+    //         // Journey just started - record start time
+    //         setJourneyStartTime(new Date());
+    //     } else if (!journeyActive && journeyStartTime) {
+    //         // Journey ended - reset start time
+    //         setJourneyStartTime(null);
+    //     }
+    // }, [journeyActive, journeyStartTime, busLocation]);
+
     useEffect(() => {
-        if (journeyActive && !journeyStartTime && busLocation) {
-            // Journey just started - record start time
-            setJourneyStartTime(new Date());
-        } else if (!journeyActive && journeyStartTime) {
-            // Journey ended - reset start time
-            setJourneyStartTime(null);
+
+    const fetchJourneyStatus = async () => {
+
+        try {
+
+            const response = await fetch(`${BACKEND_URL}/bus/status/${BUS_ID}`);
+            const data = await response.json();
+
+            if (data.success) {
+
+                setJourneyActive(data.status.journey_active);
+                setTripType(data.status.trip_type);
+
+                if (data.status.journey_started_at) {
+                    setJourneyStartTime(new Date(data.status.journey_started_at));
+                } else {
+                    setJourneyStartTime(null);
+                }
+
+            }
+
+        } catch (err) {
+
+            console.error("Error fetching journey status:", err);
+
         }
-    }, [journeyActive, journeyStartTime, busLocation]);
+
+    };
+
+    fetchJourneyStatus();
+
+}, []);
 
     // Recalculate arrival times dynamically based on current speed and journey start time
     useEffect(() => {
         if (journeyStartTime && busStops.length > 0) {
-            const currentSpeed = busLocation?.speed || 0;
-            const speedKmh = currentSpeed > 0 ? currentSpeed * 3.6 : 30; // Use actual speed or default 30 km/h
+            // const currentSpeed = busLocation?.speed || 0;
+            // const speedKmh = currentSpeed > 0 ? currentSpeed * 3.6 : 30; // Use actual speed or default 30 km/h
             
+            const currentSpeed = busLocation?.speed || 0;
+
+            // Convert m/s to km/h
+            let speedKmh = currentSpeed * 3.6;
+
+            // Ignore unrealistic GPS speeds
+            if (speedKmh < 10) {
+                speedKmh = 25;
+            }
+
             const updatedStops = busStops.map((stop, index) => {
                 const distanceFromStart = stop.distance;
                 
@@ -389,63 +433,149 @@ function Dashboard({ setPage, user, onLogout, simulationMode }) {
     }, []);
 
     // Fetch bus location and check journey status (only when NOT in simulation mode)
+    // useEffect(() => {
+    //     console.log('Polling useEffect - simulationMode:', simulationMode);
+        
+    //     if (simulationMode) {
+    //         // In simulation mode, don't fetch from backend
+    //         console.log('Simulation mode detected - skipping backend fetch');
+    //         setLoading(false);
+    //         return;
+    //     }
+
+    //     const fetchBusLocation = async () => {
+    //         try {
+    //             const response = await fetch(`${BACKEND_URL}/bus/location/${BUS_ID}`);
+    //             const data = await response.json();
+
+    //             if (data.success && data.location) {
+    //                 console.log('Latest location received:', {
+    //                     latitude: data.location.latitude,
+    //                     longitude: data.location.longitude,
+    //                     speed: data.location.speed,
+    //                     tripType: data.location.tripType,
+    //                     updated_at: data.location.updated_at
+    //                 });
+                    
+    //                 setBusLocation(data.location);
+                    
+    //                 // Update tripType from backend if available
+    //                 if (data.location.tripType && data.location.tripType !== tripType) {
+    //                     console.log('TripType changed from', tripType, 'to', data.location.tripType);
+    //                     setTripType(data.location.tripType);
+    //                 }
+                    
+    //                 // Check if journey is active by checking if location was updated recently (within last 30 seconds)
+    //                 const lastUpdate = new Date(data.location.updated_at);
+    //                 const now = new Date();
+    //                 const timeDiff = (now - lastUpdate) / 1000; // in seconds
+                    
+    //                 setJourneyActive(timeDiff < 30);
+    //             } else {
+    //                 setJourneyActive(false);
+    //                 setBusLocation(null);
+    //             }
+    //         } catch (err) {
+    //             console.error("Error fetching bus location:", err);
+    //             setJourneyActive(false);
+    //         } finally {
+    //             setLoading(false);
+    //         }
+    //     };
+
+    //     fetchBusLocation();
+        
+    //     // Poll every 10 seconds for real-time updates (as requested)
+    //     const interval = setInterval(fetchBusLocation, 10000);
+
+    //     return () => clearInterval(interval);
+    // }, [simulationMode]);
+
     useEffect(() => {
-        console.log('Polling useEffect - simulationMode:', simulationMode);
-        
-        if (simulationMode) {
-            // In simulation mode, don't fetch from backend
-            console.log('Simulation mode detected - skipping backend fetch');
-            setLoading(false);
-            return;
-        }
+    console.log("Polling useEffect - simulationMode:", simulationMode);
 
-        const fetchBusLocation = async () => {
-            try {
-                const response = await fetch(`${BACKEND_URL}/bus/location/${BUS_ID}`);
-                const data = await response.json();
+    if (simulationMode) {
+        console.log("Simulation mode detected - skipping backend fetch");
+        setLoading(false);
+        return;
+    }
 
-                if (data.success && data.location) {
-                    console.log('Latest location received:', {
-                        latitude: data.location.latitude,
-                        longitude: data.location.longitude,
-                        speed: data.location.speed,
-                        tripType: data.location.tripType,
-                        updated_at: data.location.updated_at
-                    });
-                    
-                    setBusLocation(data.location);
-                    
-                    // Update tripType from backend if available
-                    if (data.location.tripType && data.location.tripType !== tripType) {
-                        console.log('TripType changed from', tripType, 'to', data.location.tripType);
-                        setTripType(data.location.tripType);
-                    }
-                    
-                    // Check if journey is active by checking if location was updated recently (within last 30 seconds)
-                    const lastUpdate = new Date(data.location.updated_at);
-                    const now = new Date();
-                    const timeDiff = (now - lastUpdate) / 1000; // in seconds
-                    
-                    setJourneyActive(timeDiff < 30);
-                } else {
-                    setJourneyActive(false);
-                    setBusLocation(null);
-                }
-            } catch (err) {
-                console.error("Error fetching bus location:", err);
-                setJourneyActive(false);
-            } finally {
-                setLoading(false);
+    const fetchBusLocation = async () => {
+        try {
+
+            // Fetch latest bus location
+            const locationResponse = await fetch(`${BACKEND_URL}/bus/location/${BUS_ID}`);
+            const locationData = await locationResponse.json();
+
+            // Fetch journey status
+            const statusResponse = await fetch(`${BACKEND_URL}/bus/status/${BUS_ID}`);
+            const statusData = await statusResponse.json();
+
+            // ----------------------------
+            // BUS LOCATION
+            // ----------------------------
+            if (locationData.success && locationData.location) {
+
+                console.log("Latest location received:", {
+                    latitude: locationData.location.latitude,
+                    longitude: locationData.location.longitude,
+                    speed: locationData.location.speed,
+                    updated_at: locationData.location.updated_at
+                });
+
+                setBusLocation(locationData.location);
+
+            } else {
+
+                setBusLocation(null);
+
             }
-        };
 
-        fetchBusLocation();
-        
-        // Poll every 10 seconds for real-time updates (as requested)
-        const interval = setInterval(fetchBusLocation, 10000);
+            // ----------------------------
+            // JOURNEY STATUS
+            // ----------------------------
+            if (statusData.success && statusData.status) {
 
-        return () => clearInterval(interval);
-    }, [simulationMode]);
+                setJourneyActive(statusData.status.journey_active);
+
+                if (statusData.status.trip_type) {
+                    setTripType(statusData.status.trip_type);
+                }
+
+                if (statusData.status.journey_started_at) {
+                    setJourneyStartTime(
+                        new Date(statusData.status.journey_started_at)
+                    );
+                } else {
+                    setJourneyStartTime(null);
+                }
+
+            } else {
+
+                setJourneyActive(false);
+
+            }
+
+        } catch (err) {
+
+            console.error("Error fetching bus data:", err);
+
+            setJourneyActive(false);
+
+        } finally {
+
+            setLoading(false);
+
+        }
+    };
+
+    fetchBusLocation();
+
+    const interval = setInterval(fetchBusLocation, 10000);
+
+    return () => clearInterval(interval);
+
+}, [simulationMode]);
 
     useEffect(() => {
 

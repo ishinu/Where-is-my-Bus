@@ -254,6 +254,28 @@ app.get("/bus/stops/:busId", async (req, res) => {
 
 });
 
+// app.post("/bus/start", async (req, res) => {
+
+//     const { busId, tripType } = req.body;
+
+//     const { error } = await supabase
+//         .from("bus_status")
+//         .update({
+//             journey_active: true,
+//             trip_type: tripType,
+//             updated_at: new Date()
+//         })
+//         .eq("bus_id", busId);
+
+//     if (error)
+//         return res.status(500).json(error);
+
+//     res.json({
+//         success: true
+//     });
+
+// });
+
 app.post("/bus/start", async (req, res) => {
 
     const { busId, tripType } = req.body;
@@ -263,7 +285,8 @@ app.post("/bus/start", async (req, res) => {
         .update({
             journey_active: true,
             trip_type: tripType,
-            updated_at: new Date()
+            journey_started_at: new Date().toISOString(), // <-- ADD THIS LINE
+            updated_at: new Date().toISOString()
         })
         .eq("bus_id", busId);
 
@@ -276,6 +299,27 @@ app.post("/bus/start", async (req, res) => {
 
 });
 
+// app.post("/bus/stop", async (req, res) => {
+
+//     const { busId } = req.body;
+
+//     const { error } = await supabase
+//         .from("bus_status")
+//         .update({
+//             journey_active: false,
+//             updated_at: new Date()
+//         })
+//         .eq("bus_id", busId);
+
+//     if (error)
+//         return res.status(500).json(error);
+
+//     res.json({
+//         success: true
+//     });
+
+// });
+
 app.post("/bus/stop", async (req, res) => {
 
     const { busId } = req.body;
@@ -284,7 +328,7 @@ app.post("/bus/stop", async (req, res) => {
         .from("bus_status")
         .update({
             journey_active: false,
-            updated_at: new Date()
+            updated_at: new Date().toISOString()
         })
         .eq("bus_id", busId);
 

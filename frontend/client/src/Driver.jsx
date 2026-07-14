@@ -46,15 +46,15 @@ function Driver({ setPage, user, simulationMode, setSimulationMode }) {
 
 };
 
-  const startJourney = () => {
+    const startJourney = async () => {
     console.log("startJourney called - simulationMode:", simulationMode, "tripType:", tripType);
-    
+
     // Save tripType to localStorage so Dashboard can use it in simulation mode
-    localStorage.setItem('currentTripType', tripType);
-    
+    localStorage.setItem("currentTripType", tripType);
+
     if (!simulationMode && !navigator.geolocation) {
-      alert("Geolocation is not supported");
-      return;
+        alert("Geolocation is not supported");
+        return;
     }
 
     // Clear previous watcher if any
@@ -69,58 +69,152 @@ function Driver({ setPage, user, simulationMode, setSimulationMode }) {
 
     setStatus("Online");
 
+    // ==========================
+    // START JOURNEY (ONLY ONCE)
+    // ==========================
+    try {
+        await axios.post(`${BACKEND_URL}/bus/start`, {
+            busId: 1,
+            tripType: tripType
+        });
+        console.log("Journey Started");
+    } catch (err) {
+        console.log(err);
+        alert("Unable to start journey.");
+        return;
+
+    }
+
     if (simulationMode) {
-      // In simulation mode, don't use GPS - just set a flag
-      console.log("Simulation mode started - no GPS used");
+        // In simulation mode, don't use GPS - just set a flag
+        console.log("Simulation mode started - no GPS used");
     } else {
-      watchId.current = navigator.geolocation.watchPosition(
-        (position) => {
-          const lat = position.coords.latitude;
-          const lng = position.coords.longitude;
-          const spd = position.coords.speed || 0;
+        watchId.current = navigator.geolocation.watchPosition(
+            (position) => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                const spd = position.coords.speed || 0;
 
-          setLatitude(lat);
-          setLongitude(lng);
-          setSpeed(spd);
+                setLatitude(lat);
+                setLongitude(lng);
+                setSpeed(spd);
 
-          latestLocation.current = {
-            latitude: lat,
-            longitude: lng,
-            speed: spd,
-          };
-        },
-        (error) => {
-          console.log(error);
-          alert("Unable to fetch location.");
-        },
-        {
-          enableHighAccuracy: true,
-          maximumAge: 0,
-        }
-      );
+                latestLocation.current = {
+                    latitude: lat,
+                    longitude: lng,
+                    speed: spd,
+                };
+            },
+            (error) => {
+                console.log(error);
+                alert("Unable to fetch location.");
+            },
+            {
+                enableHighAccuracy: true,
+                maximumAge: 0,
+            }
+        );
     }
 
     intervalId.current = setInterval(async () => {
-      try {
-        console.log("Sending", latestLocation.current);
-        // Only send to backend if NOT in simulation mode
-        if (!simulationMode) {
-          await axios.post(`${BACKEND_URL}/bus/location`, {
-            busId: 1,
-            tripType: tripType,
-            latitude: latestLocation.current.latitude,
-            longitude: latestLocation.current.longitude,
-            speed: latestLocation.current.speed,
-          });
-          console.log("Location Sent");
-        } else {
-          console.log("Simulation mode - skipping backend update");
+        try {
+            console.log("Sending", latestLocation.current);
+
+            // Only send to backend if NOT in simulation mode
+            if (!simulationMode) {
+                await axios.post(`${BACKEND_URL}/bus/location`, {
+                    busId: 1,
+                    tripType: tripType,
+                    latitude: latestLocation.current.latitude,
+                    longitude: latestLocation.current.longitude,
+                    speed: latestLocation.current.speed,
+                });
+
+                console.log("Location Sent");
+            } else {
+                console.log("Simulation mode - skipping backend update");
+            }
+        } catch (err) {
+            console.log(err);
         }
-      } catch (err) {
-        console.log(err);
-      }
     }, 10000);
-  };
+};
+
+  // const startJourney = () => {
+  //   console.log("startJourney called - simulationMode:", simulationMode, "tripType:", tripType);
+    
+  //   // Save tripType to localStorage so Dashboard can use it in simulation mode
+  //   localStorage.setItem('currentTripType', tripType);
+    
+  //   if (!simulationMode && !navigator.geolocation) {
+  //     alert("Geolocation is not supported");
+  //     return;
+  //   }
+
+  //   // Clear previous watcher if any
+  //   if (watchId.current !== null) {
+  //       navigator.geolocation.clearWatch(watchId.current);
+  //   }
+
+  //   // Clear previous interval if any
+  //   if (intervalId.current !== null) {
+  //       clearInterval(intervalId.current);
+  //   }
+
+  //   setStatus("Online");
+
+  //   if (simulationMode) {
+  //     // In simulation mode, don't use GPS - just set a flag
+  //     console.log("Simulation mode started - no GPS used");
+  //   } else {
+  //     watchId.current = navigator.geolocation.watchPosition(
+  //       (position) => {
+  //         const lat = position.coords.latitude;
+  //         const lng = position.coords.longitude;
+  //         const spd = position.coords.speed || 0;
+
+  //         setLatitude(lat);
+  //         setLongitude(lng);
+  //         setSpeed(spd);
+
+  //         latestLocation.current = {
+  //           latitude: lat,
+  //           longitude: lng,
+  //           speed: spd,
+  //         };
+  //       },
+  //       (error) => {
+  //         console.log(error);
+  //         alert("Unable to fetch location.");
+  //       },
+  //       {
+  //         enableHighAccuracy: true,
+  //         maximumAge: 0,
+  //       }
+  //     );
+  //   }
+
+  //   intervalId.current = setInterval(async () => {
+  //     try {
+  //       console.log("Sending", latestLocation.current);
+  //       // Only send to backend if NOT in simulation mode
+  //       if (!simulationMode) {
+  //         await axios.post(`${BACKEND_URL}/bus/location`, {
+  //           busId: 1,
+  //           tripType: tripType,
+  //           latitude: latestLocation.current.latitude,
+  //           longitude: latestLocation.current.longitude,
+  //           speed: latestLocation.current.speed,
+  //         });
+  //         console.log("Location Sent");
+  //       } else {
+  //         console.log("Simulation mode - skipping backend update");
+  //       }
+  //     } catch (err) {
+  //       console.log(err);
+  //     }
+  //   }, 10000);
+  // };
 
   const handleStopJourney = async () => {
 
@@ -140,17 +234,48 @@ function Driver({ setPage, user, simulationMode, setSimulationMode }) {
 
 };
 
-  const stopJourney = () => {
+  // const stopJourney = () => {
+  //   setStatus("Offline");
+
+  //   if (watchId.current !== null) {
+  //     navigator.geolocation.clearWatch(watchId.current);
+  //   }
+
+  //   if (intervalId.current !== null) {
+  //     clearInterval(intervalId.current);
+  //   }
+  // };
+
+  const stopJourney = async () => {
+
+    try {
+
+        await axios.post(`${BACKEND_URL}/bus/stop`, {
+            busId: 1
+        });
+
+        console.log("Journey Stopped");
+
+    } catch (err) {
+
+        console.log(err);
+        alert("Unable to stop journey.");
+
+    }
+
     setStatus("Offline");
 
     if (watchId.current !== null) {
-      navigator.geolocation.clearWatch(watchId.current);
+        navigator.geolocation.clearWatch(watchId.current);
+        watchId.current = null;
     }
 
     if (intervalId.current !== null) {
-      clearInterval(intervalId.current);
+        clearInterval(intervalId.current);
+        intervalId.current = null;
     }
-  };
+
+};
 
   const checkJourney = async () => {
 
