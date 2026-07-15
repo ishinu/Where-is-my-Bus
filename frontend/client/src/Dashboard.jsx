@@ -38,7 +38,7 @@ const routes = {
             name: "Ganga Sagar",
             lat: 22.256082,
             lng: 73.211874,
-            distanceFromStart: 0.6
+            distanceFromStart: 0
         },
 
         {
@@ -84,7 +84,7 @@ const routes = {
         // },
 
         {
-            name: "Rikita Mam Stop",
+            name: "Sayajibaug",
             lat: 22.313767,
             lng: 73.241003,
             distanceFromStart: 7.1
@@ -124,6 +124,12 @@ const routes = {
             lng: 73.228992,
             distanceFromStart: 12.6
         },
+        {
+            name: "Vadodara-Halol Toll Booth",
+            lat: 22.353345,
+            lng: 73.236841,
+            distanceFromStart: 14.6
+        },
 
         {
             name: "VIER College",
@@ -141,6 +147,12 @@ const routes = {
             lat: 22.413941,
             lng: 73.302498,
             distanceFromStart: 0
+        },
+        {
+            name: "Vadodara-Halol Toll Booth",
+            lat: 22.353345,
+            lng: 73.236841,
+            distanceFromStart: 12.5
         },
 
         {
@@ -251,7 +263,7 @@ function Dashboard({ setPage, user, onLogout, simulationMode }) {
     const [busStops, setBusStops] = useState([]);
     const [totalDistance, setTotalDistance] = useState(0);
     const [isMobile, setIsMobile] = useState(false);
-    const [tripType, setTripType] = useState("morning"); // Default to morning
+    const [tripType, setTripType] = useState(null); // Default to morning
     const [animatedPosition, setAnimatedPosition] = useState([22.325, 73.190]);
     const markerRef = useRef(null);
     const animationFrameRef = useRef(null);
@@ -297,10 +309,20 @@ function Dashboard({ setPage, user, onLogout, simulationMode }) {
 
     // Initialize route based on tripType
     useEffect(() => {
-        const selectedRoute = routes[tripType] || routes.morning;
+        // const selectedRoute = routes[tripType] || routes.morning;
+        if(!tripType) return;
+        const selectedRoute = routes[tripType];
+
+        console.log("Loading Route : ",tripType);
+
         
-        console.log('Route changed - tripType:', tripType, 'Route:', tripType === 'morning' ? 'Morning Route' : 'Evening Route');
-        
+        // console.log('Route changed - tripType:', tripType, 'Route:', tripType === 'morning' ? 'Morning Route' : 'Evening Route');
+        console.log("========== ROUTE =========="); 
+        console.log("tripType State:", tripType); 
+        console.log("First Stop:", selectedRoute[0].name); 
+        console.log("Last Stop:", selectedRoute[selectedRoute.length - 1].name); 
+        console.log("===========================");
+
         // Reset current stop index when route changes
         // setCurrentStopIndex(0);
         
@@ -518,6 +540,8 @@ function Dashboard({ setPage, user, onLogout, simulationMode }) {
             const statusResponse = await fetch(`${BACKEND_URL}/bus/status/${BUS_ID}`);
             const statusData = await statusResponse.json();
 
+
+
             // ----------------------------
             // BUS LOCATION
             // ----------------------------
@@ -542,6 +566,12 @@ function Dashboard({ setPage, user, onLogout, simulationMode }) {
             // JOURNEY STATUS
             // ----------------------------
             if (statusData.success && statusData.status) {
+
+                console.log("========== JOURNEY STATUS =========="); 
+                console.log("TripType received from backend:", statusData.status.trip_type); 
+                console.log("Journey Active:", statusData.status.journey_active); 
+                console.log("Journey Started At:", statusData.status.journey_started_at); 
+                console.log("====================================");
 
                 setJourneyActive(statusData.status.journey_active);
 
@@ -912,7 +942,7 @@ useEffect(() => {
                         <path d="M4 16c0 .88.39 1.67 1 2.22V20c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h8v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1.78c.61-.55 1-1.34 1-2.22V6c0-3.5-3.58-4-8-4s-8 .5-8 4v10zm3.5 1c-.83 0-1.5-.67-1.5-1.5S6.67 14 7.5 14s1.5.67 1.5 1.5S8.33 17 7.5 17zm9 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm1.5-6H6V6h12v5z" fill="#4CAF50"/>
                     </svg>
                 </div>
-                <h2>VIE Bus Tracker</h2>
+                <h2>VIER Bus Tracker</h2>
             </div>
             <nav className="sidebar-nav">
                 <button className="nav-item active">
@@ -1288,7 +1318,7 @@ useEffect(() => {
                         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                             <path d="M4 16c0 .88.39 1.67 1 2.22V20c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h8v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1.78c.61-.55 1-1.34 1-2.22V6c0-3.5-3.58-4-8-4s-8 .5-8 4v10zm3.5 1c-.83 0-1.5-.67-1.5-1.5S6.67 14 7.5 14s1.5.67 1.5 1.5S8.33 17 7.5 17zm9 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm1.5-6H6V6h12v5z" fill="#4CAF50"/>
                         </svg>
-                        <h2>VIE Bus Tracker</h2>
+                        <h2>VIER Bus Tracker</h2>
                     </div>
                     <button className="mobile-notification-btn" type="button" aria-label="Notifications">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
